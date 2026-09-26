@@ -17,7 +17,7 @@ The mod updates Discord with your current location or activity and playable char
 
 Download either directly through the foxhollow launcher, alternatively you can get the mod directly from here.
 
-1. Download the release ZIP from GitHub Releases.
+1. Download the latest release ZIP from GitHub Releases.
 2. Extract the `sfa-rich-presence` folder into your Foxhollow Launcher `mods` directory.
 3. Start Discord.
 4. Launch Star Fox Adventures through Foxhollow.
