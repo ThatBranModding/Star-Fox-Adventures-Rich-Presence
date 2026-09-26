@@ -14,7 +14,6 @@ The mod updates Discord with your current location or activity and playable char
 - macOS Intel (x86_64)
 - macOS Apple Silicon (arm64)
 
-Windows has been runtime-tested. Linux and macOS builds are cross-platform release builds that pass automated architecture, export, dependency, and package validation; runtime testing on those platforms is still ongoing.
 
 ## Requirements
 
@@ -25,7 +24,7 @@ Windows has been runtime-tested. Linux and macOS builds are cross-platform relea
 
 Download either directly through the Foxhollow Launcher, or get the mod from GitHub Releases.
 
-1. Download the release ZIP for your platform.
+1. Download the most recent release ZIP.
 2. Extract the `sfa-rich-presence` folder into your Foxhollow Launcher `mods` directory.
 3. Start Discord.
 4. Launch Star Fox Adventures through Foxhollow.
