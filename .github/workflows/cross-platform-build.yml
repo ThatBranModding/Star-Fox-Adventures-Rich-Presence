@@ -213,10 +213,32 @@ jobs:
           test -f package/sfa-rich-presence/lib/linux-amd64/mod.so
           test -f package/sfa-rich-presence/lib/macos-arm64/mod.so
           find package/sfa-rich-presence -maxdepth 4 -type f -print
+
+      - name: Create all-platforms GitHub ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd package
+          cmake -E tar cfv ../sfa-rich-presence-0.1.21-all-platforms.zip --format=zip sfa-rich-presence
+          test -f ../sfa-rich-presence-0.1.21-all-platforms.zip
+
+      - name: Create Foxhollow .fox bundle
+        shell: bash
+        run: |
+          set -euo pipefail
           cd package/sfa-rich-presence
           cmake -E tar cfv ../../sfa-rich-presence-0.1.21.fox --format=zip mod.json discord_presence.ini lib
+          test -f ../../sfa-rich-presence-0.1.21.fox
 
-      - name: Upload combined Foxhollow package
+      - name: Upload all-platforms GitHub ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: sfa-rich-presence-0.1.21-all-platforms
+          path: sfa-rich-presence-0.1.21-all-platforms.zip
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload Foxhollow .fox bundle
         uses: actions/upload-artifact@v4
         with:
           name: sfa-rich-presence-0.1.21-fox-bundle
