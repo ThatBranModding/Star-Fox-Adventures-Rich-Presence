@@ -11,18 +11,13 @@ if(WIN32)
 elseif(APPLE)
   target_sources(sfa_rich_presence PRIVATE src/rpc_unix.c src/platform_unix.c)
 
-  # CMAKE_SYSTEM_PROCESSOR describes the runner host and is not reliable when
-  # CMAKE_OSX_ARCHITECTURES is explicitly selecting another architecture.
-  if(CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)arm64(;|$)")
-    set(MOD_PLATFORM_DIR "macos-arm64")
-  elseif(CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)x86_64(;|$)")
-    set(MOD_PLATFORM_DIR "macos-x86_64")
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-    set(MOD_PLATFORM_DIR "macos-arm64")
-  else()
-    set(MOD_PLATFORM_DIR "macos-x86_64")
+  if(CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)x86_64(;|$)")
+    message(FATAL_ERROR "Foxhollow publishing currently supports Apple Silicon macOS only")
+  elseif(NOT CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)arm64(;|$)" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+    message(FATAL_ERROR "Foxhollow publishing currently supports Apple Silicon macOS only")
   endif()
 
+  set(MOD_PLATFORM_DIR "macos-arm64")
   set(MOD_LIBRARY_NAME "mod.so")
 elseif(UNIX)
   target_sources(sfa_rich_presence PRIVATE src/rpc_unix.c src/platform_unix.c)

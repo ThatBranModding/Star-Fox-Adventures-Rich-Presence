@@ -44,15 +44,6 @@ jobs:
             zip_name: sfa-rich-presence-0.1.21-macos-arm64.zip
             artifact: sfa-rich-presence-0.1.21-macos-arm64
 
-          - name: macOS Intel
-            os: macos-15
-            platform: macos-x64
-            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
-            package_dir: macos-x86_64
-            binary: mod.so
-            zip_name: sfa-rich-presence-0.1.21-macos-x64.zip
-            artifact: sfa-rich-presence-0.1.21-macos-x64
-
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -103,13 +94,8 @@ jobs:
           file "$bin"
           archs="$(lipo -archs "$bin")"
           echo "Architectures: $archs"
-          if [ "${{ matrix.platform }}" = "macos-arm64" ]; then
-            echo "$archs" | grep -qw arm64
-            ! echo "$archs" | grep -qw x86_64
-          else
-            echo "$archs" | grep -qw x86_64
-            ! echo "$archs" | grep -qw arm64
-          fi
+          echo "$archs" | grep -qw arm64
+          ! echo "$archs" | grep -qw x86_64
           nm -gU "$bin" | grep -Eq '[_]fh_mod_initialize$'
           nm -gU "$bin" | grep -Eq '[_]fh_mod_update$'
           nm -gU "$bin" | grep -Eq '[_]fh_mod_shutdown$'
@@ -192,7 +178,7 @@ jobs:
           compression-level: 0
 
   combined:
-    name: Combined Foxhollow package
+    name: Foxhollow .fox bundle
     needs: build
     runs-on: ubuntu-latest
 
@@ -212,12 +198,6 @@ jobs:
           name: native-linux-amd64
           path: package/sfa-rich-presence/lib/linux-amd64
 
-      - name: Download macOS Intel binary
-        uses: actions/download-artifact@v4
-        with:
-          name: native-macos-x86_64
-          path: package/sfa-rich-presence/lib/macos-x86_64
-
       - name: Download macOS Apple Silicon binary
         uses: actions/download-artifact@v4
         with:
@@ -231,16 +211,15 @@ jobs:
           cp mod.json discord_presence.ini package/sfa-rich-presence/
           test -f package/sfa-rich-presence/lib/windows-amd64/mod.dll
           test -f package/sfa-rich-presence/lib/linux-amd64/mod.so
-          test -f package/sfa-rich-presence/lib/macos-x86_64/mod.so
           test -f package/sfa-rich-presence/lib/macos-arm64/mod.so
           find package/sfa-rich-presence -maxdepth 4 -type f -print
-          cd package
-          cmake -E tar cfv ../sfa-rich-presence-0.1.21-all-platforms.zip --format=zip sfa-rich-presence
+          cd package/sfa-rich-presence
+          cmake -E tar cfv ../../sfa-rich-presence-0.1.21.fox --format=zip mod.json discord_presence.ini lib
 
       - name: Upload combined Foxhollow package
         uses: actions/upload-artifact@v4
         with:
-          name: sfa-rich-presence-0.1.21-all-platforms
-          path: sfa-rich-presence-0.1.21-all-platforms.zip
+          name: sfa-rich-presence-0.1.21-fox-bundle
+          path: sfa-rich-presence-0.1.21.fox
           if-no-files-found: error
           compression-level: 0

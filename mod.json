@@ -1,7 +1,9 @@
 {
-  "id": "sfa-rich-presence",
+  "id": "com.thatbran.sfa-rich-presence",
   "name": "Star Fox Adventures: Discord Rich Presence",
   "version": "0.1.21",
   "author": "ThatBran",
-  "compatibility": { "abi": 2 }
+  "compatibility": {
+    "abi": 2
+  }
 }
