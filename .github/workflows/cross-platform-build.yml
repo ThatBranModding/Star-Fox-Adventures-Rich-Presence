@@ -40,18 +40,31 @@ jobs:
             platform: macos-arm64
             configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
             package_dir: macos-arm64
+<<<<<<< Updated upstream
             binary: mod.dylib
             zip_name: sfa-rich-presence-0.1.21-dev-macos-arm64.zip
             artifact: sfa-rich-presence-0.1.21-dev-macos-arm64
+=======
+            binary: mod.so
+            zip_name: sfa-rich-presence-0.1.21-macos-arm64.zip
+            artifact: sfa-rich-presence-0.1.21-macos-arm64
+>>>>>>> Stashed changes
 
           - name: macOS Intel
             os: macos-15
             platform: macos-x64
             configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
+<<<<<<< Updated upstream
             package_dir: macos-amd64
             binary: mod.dylib
             zip_name: sfa-rich-presence-0.1.21-dev-macos-x64.zip
             artifact: sfa-rich-presence-0.1.21-dev-macos-x64
+=======
+            package_dir: macos-x86_64
+            binary: mod.so
+            zip_name: sfa-rich-presence-0.1.21-macos-x64.zip
+            artifact: sfa-rich-presence-0.1.21-macos-x64
+>>>>>>> Stashed changes
 
     runs-on: ${{ matrix.os }}
 
@@ -99,7 +112,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bin="build/sfa-rich-presence/lib/${{ matrix.package_dir }}/mod.dylib"
+          bin="build/sfa-rich-presence/lib/${{ matrix.package_dir }}/mod.so"
           file "$bin"
           archs="$(lipo -archs "$bin")"
           echo "Architectures: $archs"
@@ -173,5 +186,74 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: build/${{ matrix.zip_name }}
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Stage native binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p native-binary
+          cp "build/sfa-rich-presence/lib/${{ matrix.package_dir }}/${{ matrix.binary }}" "native-binary/${{ matrix.binary }}"
+
+      - name: Upload native binary for combined package
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.package_dir }}
+          path: native-binary/${{ matrix.binary }}
+          if-no-files-found: error
+          compression-level: 0
+
+  combined:
+    name: Combined Foxhollow package
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: native-windows-amd64
+          path: package/sfa-rich-presence/lib/windows-amd64
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: native-linux-amd64
+          path: package/sfa-rich-presence/lib/linux-amd64
+
+      - name: Download macOS Intel binary
+        uses: actions/download-artifact@v4
+        with:
+          name: native-macos-x86_64
+          path: package/sfa-rich-presence/lib/macos-x86_64
+
+      - name: Download macOS Apple Silicon binary
+        uses: actions/download-artifact@v4
+        with:
+          name: native-macos-arm64
+          path: package/sfa-rich-presence/lib/macos-arm64
+
+      - name: Assemble and verify combined package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp mod.json discord_presence.ini package/sfa-rich-presence/
+          test -f package/sfa-rich-presence/lib/windows-amd64/mod.dll
+          test -f package/sfa-rich-presence/lib/linux-amd64/mod.so
+          test -f package/sfa-rich-presence/lib/macos-x86_64/mod.so
+          test -f package/sfa-rich-presence/lib/macos-arm64/mod.so
+          find package/sfa-rich-presence -maxdepth 4 -type f -print
+          cd package
+          cmake -E tar cfv ../sfa-rich-presence-0.1.21-all-platforms.zip --format=zip sfa-rich-presence
+
+      - name: Upload combined Foxhollow package
+        uses: actions/upload-artifact@v4
+        with:
+          name: sfa-rich-presence-0.1.21-all-platforms
+          path: sfa-rich-presence-0.1.21-all-platforms.zip
           if-no-files-found: error
           compression-level: 0
