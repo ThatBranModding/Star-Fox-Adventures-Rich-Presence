@@ -1,0 +1,177 @@
+name: Cross-platform build
+
+on:
+  push:
+    branches: [cross-platform]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            platform: windows
+            configure: cmake -S . -B build -A x64
+            package_dir: windows-amd64
+            binary: mod.dll
+            zip_name: sfa-rich-presence-0.1.21-dev-windows-x64.zip
+            artifact: sfa-rich-presence-0.1.21-dev-windows-x64
+
+          - name: Linux x64
+            os: ubuntu-latest
+            platform: linux
+            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+            package_dir: linux-amd64
+            binary: mod.so
+            zip_name: sfa-rich-presence-0.1.21-dev-linux-x64.zip
+            artifact: sfa-rich-presence-0.1.21-dev-linux-x64
+
+          - name: macOS Apple Silicon
+            os: macos-15
+            platform: macos-arm64
+            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+            package_dir: macos-arm64
+            binary: mod.dylib
+            zip_name: sfa-rich-presence-0.1.21-dev-macos-arm64.zip
+            artifact: sfa-rich-presence-0.1.21-dev-macos-arm64
+
+          - name: macOS Intel
+            os: macos-15
+            platform: macos-x64
+            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
+            package_dir: macos-amd64
+            binary: mod.dylib
+            zip_name: sfa-rich-presence-0.1.21-dev-macos-x64.zip
+            artifact: sfa-rich-presence-0.1.21-dev-macos-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: bash
+        run: ${{ matrix.configure }}
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --config Release
+
+      - name: Verify package layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/sfa-rich-presence/mod.json
+          test -f build/sfa-rich-presence/discord_presence.ini
+          test -f "build/sfa-rich-presence/lib/${{ matrix.package_dir }}/${{ matrix.binary }}"
+          count="$(find build/sfa-rich-presence/lib -type f | wc -l | tr -d ' ')"
+          test "$count" = "1"
+          find build/sfa-rich-presence -maxdepth 4 -type f -print
+
+      - name: Verify Linux binary
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="build/sfa-rich-presence/lib/linux-amd64/mod.so"
+          file "$bin"
+          file "$bin" | grep -q 'ELF 64-bit'
+          file "$bin" | grep -Eq 'x86-64|x86_64'
+          readelf -h "$bin"
+          readelf -d "$bin"
+          nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_initialize$'
+          nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_update$'
+          nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_shutdown$'
+          ldd "$bin"
+
+      - name: Verify macOS binary
+        if: startsWith(matrix.platform, 'macos-')
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="build/sfa-rich-presence/lib/${{ matrix.package_dir }}/mod.dylib"
+          file "$bin"
+          archs="$(lipo -archs "$bin")"
+          echo "Architectures: $archs"
+          if [ "${{ matrix.platform }}" = "macos-arm64" ]; then
+            echo "$archs" | grep -qw arm64
+            ! echo "$archs" | grep -qw x86_64
+          else
+            echo "$archs" | grep -qw x86_64
+            ! echo "$archs" | grep -qw arm64
+          fi
+          nm -gU "$bin" | grep -Eq '[_]fh_mod_initialize$'
+          nm -gU "$bin" | grep -Eq '[_]fh_mod_update$'
+          nm -gU "$bin" | grep -Eq '[_]fh_mod_shutdown$'
+          otool -L "$bin"
+
+      - name: Verify Windows binary
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = "build/sfa-rich-presence/lib/windows-amd64/mod.dll"
+          if (-not (Test-Path $bin)) { throw "Missing $bin" }
+
+          $bytes = [System.IO.File]::ReadAllBytes($bin)
+          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Not a PE/MZ binary" }
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+          if ([BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550) { throw "Invalid PE signature" }
+          $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+          if ($machine -ne 0x8664) { throw ("Expected AMD64 PE machine 0x8664, got 0x{0:X4}" -f $machine) }
+          Write-Host "PE architecture: AMD64"
+
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public static class NativeExports {
+              [DllImport("kernel32", SetLastError=true, CharSet=CharSet.Unicode)]
+              public static extern IntPtr LoadLibraryW(string lpFileName);
+              [DllImport("kernel32", SetLastError=true)]
+              public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+              [DllImport("kernel32", SetLastError=true)]
+              public static extern bool FreeLibrary(IntPtr hModule);
+          }
+          "@
+
+          $full = (Resolve-Path $bin).Path
+          $module = [NativeExports]::LoadLibraryW($full)
+          if ($module -eq [IntPtr]::Zero) {
+            throw "LoadLibrary failed with Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+          }
+          try {
+            foreach ($name in @("fh_mod_initialize", "fh_mod_update", "fh_mod_shutdown")) {
+              if ([NativeExports]::GetProcAddress($module, $name) -eq [IntPtr]::Zero) {
+                throw "Missing required export: $name"
+              }
+              Write-Host "Found export: $name"
+            }
+          } finally {
+            [void][NativeExports]::FreeLibrary($module)
+          }
+
+      - name: Create installable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build
+          cmake -E tar cfv "${{ matrix.zip_name }}" --format=zip sfa-rich-presence
+          test -f "${{ matrix.zip_name }}"
+
+      - name: Upload installable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: build/${{ matrix.zip_name }}
+          if-no-files-found: error
+          compression-level: 0

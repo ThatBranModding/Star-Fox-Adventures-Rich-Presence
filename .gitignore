@@ -1,4 +1,3 @@
-# CMake / build output
 /build/
 /cmake-build-*/
 CMakeCache.txt
@@ -7,22 +6,18 @@ cmake_install.cmake
 *.vcxproj
 *.vcxproj.filters
 *.sln
-
-# Compiled binaries
 *.dll
+*.so
+*.dylib
 *.exe
 *.obj
 *.pdb
 *.lib
 *.exp
-
-# Editors / OS
 .vs/
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-
-# Local logs / temporary files
 *.log
 *.tmp
