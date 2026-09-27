@@ -4,9 +4,6 @@ A Discord Rich Presence mod for **Star Fox Adventures** running through **Foxhol
 
 The mod updates Discord with your current location or activity and playable character.
 
-
- All Versions besides Windows are currently untested but should work for most situations. Edge cases might be broken, such as andross fight detection ect.
-
 ## Supported platforms
 
 - Windows x64
