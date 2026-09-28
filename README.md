@@ -29,7 +29,7 @@ Discord should show **Star Fox Adventures** as your activity once the game is ru
 
 ## AI Disclosure
 
-AI tools were used during the development of this project to assist with code generation, debugging, reverse engineering, documentation, and development iteration. All functionality was tested and reviewed by the project author before release.
+AI tools were used during the development of this project to assist with code generation, debugging, reverse engineering, documentation, and development iteration. All functionality was tested and reviewed by myself before release.
 
 ## License
 
