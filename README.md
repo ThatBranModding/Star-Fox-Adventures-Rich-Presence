@@ -8,7 +8,7 @@ The mod updates Discord with your current location or activity and playable char
 
 - Windows x64
 - Linux x64
-- macOS arm64
+- macOS
 
 
 ## Requirements
