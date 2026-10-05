@@ -13,7 +13,7 @@ The mod updates Discord with your current location or activity and playable char
 
 ## Requirements
 
-- Foxhollow Version 1.0.3 or older
+- Foxhollow
 - Discord desktop client
 
 ## Installation
