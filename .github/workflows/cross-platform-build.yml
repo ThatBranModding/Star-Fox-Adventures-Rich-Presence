@@ -23,8 +23,8 @@ jobs:
             configure: cmake -S . -B build -A x64
             package_dir: windows-amd64
             binary: mod.dll
-            zip_name: sfa-rich-presence-0.1.21-windows-x64.zip
-            artifact: sfa-rich-presence-0.1.21-windows-x64
+            zip_name: sfa-rich-presence-0.1.22-windows-x64.zip
+            artifact: sfa-rich-presence-0.1.22-windows-x64
 
           - name: Linux x64
             os: ubuntu-latest
@@ -32,8 +32,8 @@ jobs:
             configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
             package_dir: linux-amd64
             binary: mod.so
-            zip_name: sfa-rich-presence-0.1.21-linux-x64.zip
-            artifact: sfa-rich-presence-0.1.21-linux-x64
+            zip_name: sfa-rich-presence-0.1.22-linux-x64.zip
+            artifact: sfa-rich-presence-0.1.22-linux-x64
 
           - name: macOS Apple Silicon
             os: macos-15
@@ -41,8 +41,8 @@ jobs:
             configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
             package_dir: macos-arm64
             binary: mod.so
-            zip_name: sfa-rich-presence-0.1.21-macos-arm64.zip
-            artifact: sfa-rich-presence-0.1.21-macos-arm64
+            zip_name: sfa-rich-presence-0.1.22-macos-arm64.zip
+            artifact: sfa-rich-presence-0.1.22-macos-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -83,6 +83,7 @@ jobs:
           nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_initialize$'
           nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_update$'
           nm -D --defined-only "$bin" | grep -Eq '[[:space:]]fh_mod_shutdown$'
+          nm -D --defined-only "$bin" | grep -Eq '[[:space:]]sfa_rp_set_play_as_krystal_v1$'
           ldd "$bin"
 
       - name: Verify macOS binary
@@ -99,6 +100,7 @@ jobs:
           nm -gU "$bin" | grep -Eq '[_]fh_mod_initialize$'
           nm -gU "$bin" | grep -Eq '[_]fh_mod_update$'
           nm -gU "$bin" | grep -Eq '[_]fh_mod_shutdown$'
+          nm -gU "$bin" | grep -Eq '[_]sfa_rp_set_play_as_krystal_v1$'
           otool -L "$bin"
 
       - name: Verify Windows binary
@@ -136,7 +138,7 @@ jobs:
             throw "LoadLibrary failed with Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
           }
           try {
-            foreach ($name in @("fh_mod_initialize", "fh_mod_update", "fh_mod_shutdown")) {
+            foreach ($name in @("fh_mod_initialize", "fh_mod_update", "fh_mod_shutdown", "sfa_rp_set_play_as_krystal_v1")) {
               if ([NativeExports]::GetProcAddress($module, $name) -eq [IntPtr]::Zero) {
                 throw "Missing required export: $name"
               }
@@ -219,29 +221,29 @@ jobs:
         run: |
           set -euo pipefail
           cd package
-          cmake -E tar cfv ../sfa-rich-presence-0.1.21-all-platforms.zip --format=zip sfa-rich-presence
-          test -f ../sfa-rich-presence-0.1.21-all-platforms.zip
+          cmake -E tar cfv ../sfa-rich-presence-0.1.22-all-platforms.zip --format=zip sfa-rich-presence
+          test -f ../sfa-rich-presence-0.1.22-all-platforms.zip
 
       - name: Create Foxhollow .fox bundle
         shell: bash
         run: |
           set -euo pipefail
           cd package/sfa-rich-presence
-          cmake -E tar cfv ../../sfa-rich-presence-0.1.21.fox --format=zip mod.json discord_presence.ini lib
-          test -f ../../sfa-rich-presence-0.1.21.fox
+          cmake -E tar cfv ../../sfa-rich-presence-0.1.22.fox --format=zip mod.json discord_presence.ini lib
+          test -f ../../sfa-rich-presence-0.1.22.fox
 
       - name: Upload all-platforms GitHub ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: sfa-rich-presence-0.1.21-all-platforms
-          path: sfa-rich-presence-0.1.21-all-platforms.zip
+          name: sfa-rich-presence-0.1.22-all-platforms
+          path: sfa-rich-presence-0.1.22-all-platforms.zip
           if-no-files-found: error
           compression-level: 0
 
       - name: Upload Foxhollow .fox bundle
         uses: actions/upload-artifact@v4
         with:
-          name: sfa-rich-presence-0.1.21-fox-bundle
-          path: sfa-rich-presence-0.1.21.fox
+          name: sfa-rich-presence-0.1.22-fox-bundle
+          path: sfa-rich-presence-0.1.22.fox
           if-no-files-found: error
           compression-level: 0

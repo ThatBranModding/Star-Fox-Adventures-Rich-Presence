@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(sfa_rich_presence VERSION 0.1.21 LANGUAGES C)
+project(sfa_rich_presence VERSION 0.1.22 LANGUAGES C)
 
 add_library(sfa_rich_presence SHARED src/mod.c)
 target_include_directories(sfa_rich_presence PRIVATE include src)

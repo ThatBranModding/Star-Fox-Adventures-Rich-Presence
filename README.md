@@ -34,3 +34,7 @@ AI tools were used during the development of this project to assist with code ge
 ## License
 
 Licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Play As Krystal compatibility
+
+Version 0.1.22 onwards adds compatability with the play as Krystal mod. Allowing the mod to detect the player is actually playing as Krystal in normally Fox playable areas. 
