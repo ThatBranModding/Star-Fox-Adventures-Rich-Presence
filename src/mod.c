@@ -6,26 +6,395 @@
 #include <string.h>
 #include <time.h>
 
-static const FhModHost* H;static FhMod* M;static void*(*getPos)(void);static int(*coordsToId)(int,int,int);static float* blockSize;static unsigned char* mapLoaded;static unsigned char** savePtr;static unsigned long long frame;static int lastMap=-9999,overrideMap=0;static time_t started;
-static char appId[64]="1553099945110806538",largeImage[64]="star_fox_adventures_v2",largeText[128]="Star Fox Adventures";
-typedef struct {float x,y,z;signed char angle,mapLayer,mapDataFileId;unsigned char padF;} Pos;
-static void logm(FhLogLevel l,const char*s){if(H&&H->log&&M)H->log(M,l,s);}static int floorCell(float v,float b){int i=(int)(v/b);if(v<0&&(float)i*b!=v)--i;return i;}
-static const char* mapName(int m){switch(m){case 0x00:return"Scales Galleon";case 0x02:return"Dragon Rock";case 0x04:return"Volcano Force Point";case 0x07:return"ThornTail Hollow";case 0x08:return"ThornTail Well";case 0x0A:return"SnowHorn Wastes";case 0x0B:return"Krazoa Palace";case 0x0C:return"CloudRunner Fortress";case 0x0D:return"Walled City";case 0x0E:return"LightFoot Village";case 0x10:return"CloudRunner Dungeon";case 0x12:return"Moon Mountain Pass";case 0x13:case 0x1B:return"DarkIce Mines";case 0x15:case 0x32:return"Ocean Force Point";case 0x17:return"Ice Mountain";case 0x1C:return"Galdon";case 0x1D:return"Cape Claw";case 0x1F:return"Test of Combat";case 0x20:return"Test of Fear";case 0x21:return"Test of Skill";case 0x22:return"Test of Knowledge";case 0x26:return"Andross";case 0x27:return"Test of Strength";case 0x28:return"General Scales";case 0x29:return"World Map";case 0x2B:return"CloudRunner Race";case 0x2C:return"Drakor";case 0x30:return"RedEye King";case 0x33:return"ThornTail Store";case 0x34:return"Dragon Rock";case 0x36:return"Magic Cave";case 0x3A:return"Arwing Flight";case 0x3B:return"Arwing Flight to DarkIce Mines";case 0x3C:return"Arwing Flight to CloudRunner Fortress";case 0x3D:return"Arwing Flight to Walled City";case 0x3E:return"Arwing Flight to Dragon Rock";case 0x3F:return"Title Screen";case 0x41:return"Great Fox";default:return"Dinosaur Planet";}}
-static int currentMap(void){Pos*p;float b;if(!getPos||!coordsToId||!blockSize)return-1;p=(Pos*)getPos();if(!p)return-1;b=*blockSize;if(b<1)b=640;return coordsToId(floorCell(p->x,b),floorCell(p->z,b),p->mapLayer);}
-static void trim(char*s){char*p=s;size_t n;while(*p==' '||*p=='\t')p++;if(p!=s)memmove(s,p,strlen(p)+1);n=strlen(s);while(n&&(s[n-1]=='\r'||s[n-1]=='\n'||s[n-1]==' '||s[n-1]=='\t'))s[--n]=0;}
-static void config(void){char path[1024],line[512];FILE*f;const char*d=(H&&H->modDir)?H->modDir(M):0;if(!d)return;
+static const FhModHost *H;
+static FhMod *M;
+static void *(*getPos)(void);
+static int (*coordsToId)(int, int, int);
+static float *blockSize;
+static unsigned char *mapLoaded;
+static unsigned char **savePtr;
+static unsigned long long frame;
+static int lastMap = -9999, overrideMap = 0;
+static time_t started;
+static char appId[64] = "1553099945110806538", largeImage[64] = "star_fox_adventures_v2",
+            largeText[128] = "Star Fox Adventures";
+
+typedef struct {
+    float x, y, z;
+    signed char angle, mapLayer, mapDataFileId;
+    unsigned char padF;
+} Pos;
+
+static void logm(FhLogLevel l, const char *s) {
+    if (H && H->log && M)
+        H->log(M, l, s);
+}
+
+static int floorCell(float v, float b) {
+    int i = (int)(v / b);
+    if (v < 0 && (float)i * b != v)
+        --i;
+    return i;
+}
+
+static const char *mapName(int m) {
+    switch (m) {
+    case 0x00:
+        return "Scales Galleon";
+    case 0x02:
+        return "Dragon Rock";
+    case 0x04:
+        return "Volcano Force Point";
+    case 0x07:
+        return "ThornTail Hollow";
+    case 0x08:
+        return "ThornTail Well";
+    case 0x0A:
+        return "SnowHorn Wastes";
+    case 0x0B:
+        return "Krazoa Palace";
+    case 0x0C:
+        return "CloudRunner Fortress";
+    case 0x0D:
+        return "Walled City";
+    case 0x0E:
+        return "LightFoot Village";
+    case 0x10:
+        return "CloudRunner Dungeon";
+    case 0x12:
+        return "Moon Mountain Pass";
+    case 0x13:
+    case 0x1B:
+        return "DarkIce Mines";
+    case 0x15:
+    case 0x32:
+        return "Ocean Force Point";
+    case 0x17:
+        return "Ice Mountain";
+    case 0x1C:
+        return "Galdon";
+    case 0x1D:
+        return "Cape Claw";
+    case 0x1F:
+        return "Test of Combat";
+    case 0x20:
+        return "Test of Fear";
+    case 0x21:
+        return "Test of Skill";
+    case 0x22:
+        return "Test of Knowledge";
+    case 0x26:
+        return "Andross";
+    case 0x27:
+        return "Test of Strength";
+    case 0x28:
+        return "General Scales";
+    case 0x29:
+        return "World Map";
+    case 0x2B:
+        return "CloudRunner Race";
+    case 0x2C:
+        return "Drakor";
+    case 0x30:
+        return "RedEye King";
+    case 0x33:
+        return "ThornTail Store";
+    case 0x34:
+        return "Dragon Rock";
+    case 0x36:
+        return "Magic Cave";
+    case 0x3A:
+        return "Arwing Flight";
+    case 0x3B:
+        return "Arwing Flight to DarkIce Mines";
+    case 0x3C:
+        return "Arwing Flight to CloudRunner Fortress";
+    case 0x3D:
+        return "Arwing Flight to Walled City";
+    case 0x3E:
+        return "Arwing Flight to Dragon Rock";
+    case 0x3F:
+        return "Title Screen";
+    case 0x41:
+        return "Great Fox";
+    default:
+        return "Dinosaur Planet";
+    }
+}
+
+static int currentMap(void) {
+    Pos *p;
+    float b;
+    if (!getPos || !coordsToId || !blockSize)
+        return -1;
+    p = (Pos *)getPos();
+    if (!p)
+        return -1;
+    b = *blockSize;
+    if (b < 1)
+        b = 640;
+    return coordsToId(floorCell(p->x, b), floorCell(p->z, b), p->mapLayer);
+}
+
+static void trim(char *s) {
+    char *p = s;
+    size_t n;
+    while (*p == ' ' || *p == '\t')
+        p++;
+    if (p != s)
+        memmove(s, p, strlen(p) + 1);
+    n = strlen(s);
+    while (n && (s[n - 1] == '\r' || s[n - 1] == '\n' || s[n - 1] == ' ' || s[n - 1] == '\t'))
+        s[--n] = 0;
+}
+
+static void config(void) {
+    char path[1024], line[512];
+    FILE *f;
+    const char *d = (H && H->modDir) ? H->modDir(M) : 0;
+    if (!d)
+        return;
 #ifdef _WIN32
- snprintf(path,sizeof(path),"%s\\discord_presence.ini",d);
+    snprintf(path, sizeof(path), "%s\\discord_presence.ini", d);
 #else
- snprintf(path,sizeof(path),"%s/discord_presence.ini",d);
+    snprintf(path, sizeof(path), "%s/discord_presence.ini", d);
 #endif
- f=fopen(path,"rb");if(!f){logm(FH_LOG_INFO,"Discord Rich Presence: using built-in configuration.");return;}while(fgets(line,sizeof(line),f)){char*e;trim(line);if(!line[0]||line[0]=='#'||line[0]==';')continue;e=strchr(line,'=');if(!e)continue;*e++=0;trim(line);trim(e);if(!strcmp(line,"application_id"))snprintf(appId,sizeof(appId),"%s",e);else if(!strcmp(line,"large_image"))snprintf(largeImage,sizeof(largeImage),"%s",e);else if(!strcmp(line,"large_text"))snprintf(largeText,sizeof(largeText),"%s",e);}fclose(f);}
+    f = fopen(path, "rb");
+    if (!f) {
+        logm(FH_LOG_INFO, "Discord Rich Presence: using built-in configuration.");
+        return;
+    }
+    while (fgets(line, sizeof(line), f)) {
+        char *e;
+        trim(line);
+        if (!line[0] || line[0] == '#' || line[0] == ';')
+            continue;
+        e = strchr(line, '=');
+        if (!e)
+            continue;
+        *e++ = 0;
+        trim(line);
+        trim(e);
+        if (!strcmp(line, "application_id"))
+            snprintf(appId, sizeof(appId), "%s", e);
+        else if (!strcmp(line, "large_image"))
+            snprintf(largeImage, sizeof(largeImage), "%s", e);
+        else if (!strcmp(line, "large_text"))
+            snprintf(largeText, sizeof(largeText), "%s", e);
+    }
+    fclose(f);
+}
+
 static int playAsKrystal;
-FH_MOD_EXPORT void sfa_rp_set_play_as_krystal_v1(int enabled){int value=enabled!=0;if(!H||!M)return;if(playAsKrystal==value)return;playAsKrystal=value;lastMap=-9999;logm(FH_LOG_INFO,value?"Discord Rich Presence: Play As Krystal mod detected; Initialising play as Krystal support.":"Discord Rich Presence: Play As Krystal compatibility disabled.");}
-static const char* character(void){unsigned char*s;if(playAsKrystal)return"Krystal";if(!savePtr||!(s=*savePtr))return"Fox";return(s[0x20]&1)?"Fox":"Krystal";}
-static void details(int m,char*out,size_t n){switch(m){case 0x3A:snprintf(out,n,"Flying to Dinosaur Planet");break;case 0x3B:snprintf(out,n,"Flying to DarkIce Mines");break;case 0x3C:snprintf(out,n,"Flying to CloudRunner Fortress");break;case 0x3D:snprintf(out,n,"Flying to Walled City");break;case 0x3E:snprintf(out,n,"Flying to Dragon Rock");break;case 0x1C:snprintf(out,n,"Fighting Galdon");break;case 0x2C:snprintf(out,n,"Fighting Drakor");break;case 0x30:snprintf(out,n,"Fighting RedEye King");break;case 0x26:snprintf(out,n,"Battling Andross");break;case 0x28:snprintf(out,n,"Confronting General Scales");break;case 0x2B:snprintf(out,n,"Racing through CloudRunner Fortress");break;case 0x33:snprintf(out,n,"Shopping in the ThornTail Store");break;case 0x1F:case 0x20:case 0x21:case 0x22:case 0x27:snprintf(out,n,"Taking the %s",mapName(m));break;case 0x29:snprintf(out,n,"On the World Map");break;case 0x41:snprintf(out,n,"On the Great Fox");break;default:snprintf(out,n,"Exploring %s",mapName(m));}}
-static void presence(int m){char json[2048],d[256],s[128];unsigned long pid=rp_process_id();long long ts=(long long)started;if(m==0x3F){snprintf(d,sizeof(d),"Main Menu");s[0]=0;}else if(m==0x00){snprintf(d,sizeof(d),"Krystal's Prologue");snprintf(s,sizeof(s),"Playing as Krystal");}else{details(m,d,sizeof(d));snprintf(s,sizeof(s),"Playing as %s",character());}if(s[0])snprintf(json,sizeof(json),"{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":{\"details\":\"%s\",\"state\":\"%s\",\"timestamps\":{\"start\":%lld},\"assets\":{\"large_image\":\"%s\",\"large_text\":\"%s\"}}},\"nonce\":\"%llu\"}",pid,d,s,ts,largeImage,largeText,frame);else snprintf(json,sizeof(json),"{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":{\"details\":\"%s\",\"timestamps\":{\"start\":%lld},\"assets\":{\"large_image\":\"%s\",\"large_text\":\"%s\"}}},\"nonce\":\"%llu\"}",pid,d,ts,largeImage,largeText,frame);rp_rpc_write(1,json);}
-static void breadcrumb(int m){rp_platform_atomic_map_set(m);if(m==0x2C){overrideMap=0x2C;lastMap=0x2C;if(rp_rpc_connected())presence(0x2C);}else if(overrideMap==0x2C){overrideMap=0;lastMap=m;if(rp_rpc_connected())presence(m);}}
-FH_MOD_EXPORT int fh_mod_initialize(FhMod*mod,const FhModHost*host){if(!host||host->abiVersion!=FH_MOD_ABI_VERSION)return FH_MOD_ERROR;H=host;M=mod;playAsKrystal=0;started=time(0);if(host->symbolAddress){getPos=(void*(*)(void))host->symbolAddress(mod,"SaveGame_getCurCharPos");coordsToId=(int(*)(int,int,int))host->symbolAddress(mod,"mapCoordsToId");blockSize=(float*)host->symbolAddress(mod,"gMapBlockWorldSize");mapLoaded=(unsigned char*)host->symbolAddress(mod,"gGameLoopMapLoaded");savePtr=(unsigned char**)host->symbolAddress(mod,"gGameBitSaveData");}config();if(rp_platform_install_map_capture(mod,host,breadcrumb))logm(FH_LOG_INFO,"Discord Rich Presence: rich presence map tracking initialised.");else logm(FH_LOG_WARN,"Discord Rich Presence: could not initialise proper map tracking; normal map detection remains active.");logm(FH_LOG_INFO,"SFA Discord Rich Presence 0.1.22 loaded.");return FH_MOD_OK;}
-FH_MOD_EXPORT void fh_mod_update(FhMod*mod){int m,loaded;(void)mod;frame++;if(!appId[0])return;if(!rp_rpc_connected()){if((frame%300)!=1)return;if(!rp_rpc_connect(appId))return;logm(FH_LOG_INFO,"Discord Rich Presence connected.");}if(mapLoaded&&!*mapLoaded)return;m=currentMap();if(m<0)return;loaded=rp_platform_atomic_map_get();switch(loaded){case 0x1C:case 0x26:case 0x2C:case 0x30:case 0x3A:case 0x3B:case 0x3C:case 0x3D:case 0x3E:overrideMap=loaded;break;case 0x3F:case 0x41:case 0x00:overrideMap=0;break;default:if(loaded>=0&&loaded!=0x0B)overrideMap=0;break;}if(overrideMap)m=overrideMap;if(m!=lastMap||(frame%900)==0){lastMap=m;presence(m);}}
-FH_MOD_EXPORT void fh_mod_shutdown(FhMod*mod){(void)mod;rp_platform_remove_map_capture(M,H);if(rp_rpc_connected()){char j[256];snprintf(j,sizeof(j),"{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":null},\"nonce\":\"shutdown\"}",rp_process_id());rp_rpc_write(1,j);}rp_rpc_close();playAsKrystal=0;H=0;M=0;}
+
+FH_MOD_EXPORT void sfa_rp_set_play_as_krystal_v1(int enabled) {
+    int value = enabled != 0;
+    if (!H || !M)
+        return;
+    if (playAsKrystal == value)
+        return;
+    playAsKrystal = value;
+    lastMap = -9999;
+    logm(FH_LOG_INFO, value ? "Discord Rich Presence: Play As Krystal mod detected; Initialising "
+                              "play as Krystal support."
+                            : "Discord Rich Presence: Play As Krystal compatibility disabled.");
+}
+
+static const char *character(void) {
+    unsigned char *s;
+    if (playAsKrystal)
+        return "Krystal";
+    if (!savePtr || !(s = *savePtr))
+        return "Fox";
+    return (s[0x20] & 1) ? "Fox" : "Krystal";
+}
+
+static void details(int m, char *out, size_t n) {
+    switch (m) {
+    case 0x3A:
+        snprintf(out, n, "Flying to Dinosaur Planet");
+        break;
+    case 0x3B:
+        snprintf(out, n, "Flying to DarkIce Mines");
+        break;
+    case 0x3C:
+        snprintf(out, n, "Flying to CloudRunner Fortress");
+        break;
+    case 0x3D:
+        snprintf(out, n, "Flying to Walled City");
+        break;
+    case 0x3E:
+        snprintf(out, n, "Flying to Dragon Rock");
+        break;
+    case 0x1C:
+        snprintf(out, n, "Fighting Galdon");
+        break;
+    case 0x2C:
+        snprintf(out, n, "Fighting Drakor");
+        break;
+    case 0x30:
+        snprintf(out, n, "Fighting RedEye King");
+        break;
+    case 0x26:
+        snprintf(out, n, "Battling Andross");
+        break;
+    case 0x28:
+        snprintf(out, n, "Confronting General Scales");
+        break;
+    case 0x2B:
+        snprintf(out, n, "Racing through CloudRunner Fortress");
+        break;
+    case 0x33:
+        snprintf(out, n, "Shopping in the ThornTail Store");
+        break;
+    case 0x1F:
+    case 0x20:
+    case 0x21:
+    case 0x22:
+    case 0x27:
+        snprintf(out, n, "Taking the %s", mapName(m));
+        break;
+    case 0x29:
+        snprintf(out, n, "On the World Map");
+        break;
+    case 0x41:
+        snprintf(out, n, "On the Great Fox");
+        break;
+    default:
+        snprintf(out, n, "Exploring %s", mapName(m));
+    }
+}
+
+static void presence(int m) {
+    char json[2048], d[256], s[128];
+    unsigned long pid = rp_process_id();
+    long long ts = (long long)started;
+    if (m == 0x3F) {
+        snprintf(d, sizeof(d), "Main Menu");
+        s[0] = 0;
+    } else if (m == 0x00) {
+        snprintf(d, sizeof(d), "Krystal's Prologue");
+        snprintf(s, sizeof(s), "Playing as Krystal");
+    } else {
+        details(m, d, sizeof(d));
+        snprintf(s, sizeof(s), "Playing as %s", character());
+    }
+    if (s[0])
+        snprintf(json, sizeof(json),
+                 "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":{\"details\":\"%s\","
+                 "\"state\":\"%s\",\"timestamps\":{\"start\":%lld},\"assets\":{\"large_image\":\"%"
+                 "s\",\"large_text\":\"%s\"}}},\"nonce\":\"%llu\"}",
+                 pid, d, s, ts, largeImage, largeText, frame);
+    else
+        snprintf(json, sizeof(json),
+                 "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":{\"details\":\"%s\","
+                 "\"timestamps\":{\"start\":%lld},\"assets\":{\"large_image\":\"%s\",\"large_"
+                 "text\":\"%s\"}}},\"nonce\":\"%llu\"}",
+                 pid, d, ts, largeImage, largeText, frame);
+    rp_rpc_write(1, json);
+}
+
+static void breadcrumb(int m) {
+    rp_platform_atomic_map_set(m);
+    if (m == 0x2C) {
+        overrideMap = 0x2C;
+        lastMap = 0x2C;
+        if (rp_rpc_connected())
+            presence(0x2C);
+    } else if (overrideMap == 0x2C) {
+        overrideMap = 0;
+        lastMap = m;
+        if (rp_rpc_connected())
+            presence(m);
+    }
+}
+
+FH_MOD_EXPORT int fh_mod_initialize(FhMod *mod, const FhModHost *host) {
+    if (!host || host->abiVersion != FH_MOD_ABI_VERSION)
+        return FH_MOD_ERROR;
+    H = host;
+    M = mod;
+    playAsKrystal = 0;
+    started = time(0);
+    if (host->symbolAddress) {
+        getPos = (void *(*)(void))host->symbolAddress(mod, "SaveGame_getCurCharPos");
+        coordsToId = (int (*)(int, int, int))host->symbolAddress(mod, "mapCoordsToId");
+        blockSize = (float *)host->symbolAddress(mod, "gMapBlockWorldSize");
+        mapLoaded = (unsigned char *)host->symbolAddress(mod, "gGameLoopMapLoaded");
+        savePtr = (unsigned char **)host->symbolAddress(mod, "gGameBitSaveData");
+    }
+    config();
+    if (rp_platform_install_map_capture(mod, host, breadcrumb))
+        logm(FH_LOG_INFO, "Discord Rich Presence: rich presence map tracking initialised.");
+    else
+        logm(FH_LOG_WARN, "Discord Rich Presence: could not initialise proper map tracking; normal "
+                          "map detection remains active.");
+    logm(FH_LOG_INFO, "SFA Discord Rich Presence 0.1.22 loaded.");
+    return FH_MOD_OK;
+}
+
+FH_MOD_EXPORT void fh_mod_update(FhMod *mod) {
+    int m, loaded;
+    (void)mod;
+    frame++;
+    if (!appId[0])
+        return;
+    if (!rp_rpc_connected()) {
+        if ((frame % 300) != 1)
+            return;
+        if (!rp_rpc_connect(appId))
+            return;
+        logm(FH_LOG_INFO, "Discord Rich Presence connected.");
+    }
+    if (mapLoaded && !*mapLoaded)
+        return;
+    m = currentMap();
+    if (m < 0)
+        return;
+    loaded = rp_platform_atomic_map_get();
+    switch (loaded) {
+    case 0x1C:
+    case 0x26:
+    case 0x2C:
+    case 0x30:
+    case 0x3A:
+    case 0x3B:
+    case 0x3C:
+    case 0x3D:
+    case 0x3E:
+        overrideMap = loaded;
+        break;
+    case 0x3F:
+    case 0x41:
+    case 0x00:
+        overrideMap = 0;
+        break;
+    default:
+        if (loaded >= 0 && loaded != 0x0B)
+            overrideMap = 0;
+        break;
+    }
+    if (overrideMap)
+        m = overrideMap;
+    if (m != lastMap || (frame % 900) == 0) {
+        lastMap = m;
+        presence(m);
+    }
+}
+
+FH_MOD_EXPORT void fh_mod_shutdown(FhMod *mod) {
+    (void)mod;
+    rp_platform_remove_map_capture(M, H);
+    if (rp_rpc_connected()) {
+        char j[256];
+        snprintf(j, sizeof(j),
+                 "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%lu,\"activity\":null},\"nonce\":"
+                 "\"shutdown\"}",
+                 rp_process_id());
+        rp_rpc_write(1, j);
+    }
+    rp_rpc_close();
+    playAsKrystal = 0;
+    H = 0;
+    M = 0;
+}
