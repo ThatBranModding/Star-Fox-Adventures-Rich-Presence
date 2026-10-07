@@ -4,6 +4,9 @@
   "version": "0.1.22",
   "author": "ThatBran",
   "compatibility": {
-    "abi": 2
+    "abi": 2,
+    "port": {
+      "min": "1.0.19"
+    }
   }
 }
