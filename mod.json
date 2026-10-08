@@ -6,7 +6,7 @@
   "compatibility": {
     "abi": 2,
     "port": {
-      "min": "1.0.19"
+      "min": "1.0.20"
     }
   }
 }
